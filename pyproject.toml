@@ -71,4 +71,5 @@ dev = [
 members = [
     "mcp_server/universal_mcp_client",
     "vector_db/chroma_db",
+    "vector_db/qdrant",
 ]
