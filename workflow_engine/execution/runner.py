@@ -1,5 +1,7 @@
 # workflow_engine/execution/runner.py
 from abc import ABC, abstractmethod
+from langgraph.checkpoint.memory import MemorySaver
+from langgraph.graph import START, MessagesState, StateGraph
 from ..nodes.base import WorkflowNode
 
 
@@ -17,6 +19,7 @@ class WorkflowRunner:
         self.inputs: str | None = None
         self.current_state: WorkflowState | None = None
         self.output: str | None = None
+        self.langgraph_workflow = StateGraph(state_schema=MessagesState)
 
     def transition_to(self, state: WorkflowState):
         self.current_state = state
@@ -24,6 +27,7 @@ class WorkflowRunner:
     def run(self, workflow: WorkflowNode, initial_inputs: str):
         self.workflow = workflow
         self.inputs = initial_inputs
+        self.history.append(("user", initial_inputs))
         self.transition_to(PendingState())
         self.current_state.handle(self)
 
@@ -40,6 +44,13 @@ class RunningState(WorkflowState):
         print("Workflow is Running...")
         try:
             runner.workflow.execute(runner.inputs)
+            while True:
+                if input("Continue chat? (y/n): ").lower() != "y":
+                    print("Workflow execution continued by user.")
+                    runner.inputs = input("Enter new input: ")
+                    runner.workflow.execute(runner.inputs)
+                else:
+                    break
             runner.transition_to(CompletedState())
             runner.current_state.handle(runner)
         except Exception as e:
